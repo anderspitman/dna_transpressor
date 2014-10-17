@@ -44,13 +44,23 @@ void test_packed_seq() {
   int len_sym;
   pack_sequence(in_sym, 14, &packed_seq, &len_seq);
   unpack_sequence(packed_seq, len_seq, &symbols, &len_sym);
-  printf("%s\n", symbols);
+  //printf("%s\n", symbols);
+}
+
+void test_packed_seq_from_file() {
+  char *name= "test_packed_seq_from_file";
+  const char *filename = "testfile.txt";
+  unsigned char *packed_seq;
+  int len_seq;
+  pack_from_file(filename, &packed_seq, &len_seq);
+  fprintf(stderr, "len: %d\n", len_seq);
 }
 
 int main(int argc, char **argv) {
   test_symbol_to_number();
   test_number_to_symbol();
   test_packed_seq();
+  test_packed_seq_from_file();
   printf("All tests passed\n");
   return 0;
 }

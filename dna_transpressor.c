@@ -25,10 +25,6 @@ int sym_len_to_packed_size(int len_sym) {
   return len;
 }
 
-int packed_len_to_sym_len(int packed_len) {
-  return packed_len * NUM_SYMS;
-}
-
 void packed_seq_init_common(PackedSeq *seq) {
   seq->byte_idx = 0;
   seq->bit_idx = 0;
@@ -110,7 +106,7 @@ void pack_sequence(char *symbols, int len_sym, unsigned char **packed_seq,
                    int *len_packed) {
   PackedSeq *seq = packed_seq_create(symbols, len_sym);
   *packed_seq = seq->buf;
-  *len_packed = seq->len;
+  *len_packed = seq->size;
 }
 
 void unpack_sequence(unsigned char *packed_seq, int len_packed,
@@ -119,6 +115,29 @@ void unpack_sequence(unsigned char *packed_seq, int len_packed,
   *len_sym = seq->len;
   *symbols = malloc(seq->len*sizeof(char));
   packed_seq_extract(seq, *symbols);
+}
+
+void pack_from_file(const char *filename, unsigned char **packed_seq,
+                    int *len_packed) {
+  FILE *fp = fopen(filename, "r");
+
+  const int READ_SIZE = 1024;
+
+  fseek(fp, 0L, SEEK_END);
+  int size = ftell(fp);
+  fseek(fp, 0L, SEEK_SET);
+
+  char *symbols = malloc(size*sizeof(char));
+  int idx = 0;
+
+  for (int i=0; i<size; i++) {
+    int read_size = fscanf(fp, "%s", &symbols[idx]);
+    idx += read_size;
+  }
+
+  pack_sequence(symbols, size, packed_seq, len_packed);
+
+  fclose(fp);
 }
 
 int symbol_to_number(char sym) {
