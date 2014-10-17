@@ -91,7 +91,9 @@ void packed_seq_pop(PackedSeq *seq, char *sym) {
 PackedSeq *packed_seq_create(char *symbols, int len_symbols) {
   PackedSeq *seq = packed_seq_init(len_symbols);
   for (int i=0; i<len_symbols; i++) {
-    packed_seq_push(seq, symbols[i]);
+    if (symbol_to_number(symbols[i]) != -1) {
+      packed_seq_push(seq, symbols[i]);
+    }
   }
   return seq;
 }
