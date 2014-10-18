@@ -7,7 +7,8 @@ const int NUM_SYMS = 4;
 
 void print_vector(unsigned char *vec, int len) {
   for (int i=0; i<len; i++) {
-    fprintf(stderr, "%c  ", vec[i]);
+    fprintf(stderr, "%X  ", vec[i]);
+    //fprintf(stderr, "%c  ", vec[i]);
   }
   fprintf(stderr, "%s", "\n");
 }
@@ -23,6 +24,10 @@ int sym_len_to_packed_size(int len_sym) {
     len += 1;
   }
   return len;
+}
+
+int packed_size_to_sym_len(int packed_size) {
+  return packed_size * NUM_SYMS;
 }
 
 void packed_seq_init_common(PackedSeq *seq) {
@@ -44,6 +49,7 @@ PackedSeq *packed_seq_init(int len) {
 
 PackedSeq *packed_seq_init_buf(unsigned char *buf, int len) {
   PackedSeq *new_seq = malloc(sizeof(PackedSeq));
+  //new_seq->len = packed_size_to_sym_len(size);
   new_seq->len = len;
   packed_seq_init_common(new_seq);
   new_seq->buf = buf;
@@ -119,27 +125,89 @@ void unpack_sequence(unsigned char *packed_seq, int len_packed,
   packed_seq_extract(seq, *symbols);
 }
 
-void pack_from_file(const char *filename, unsigned char **packed_seq,
-                    int *len_packed) {
+void symbols_from_file(const char *filename, char **out_symbols,
+                       int *size) {
   FILE *fp = fopen(filename, "r");
-
-  const int READ_SIZE = 1024;
-
   fseek(fp, 0L, SEEK_END);
-  int size = ftell(fp);
+  *size = ftell(fp);
   fseek(fp, 0L, SEEK_SET);
+  *out_symbols = malloc((*size)*sizeof(char));
+  //int read_size = fscanf(fp, "%s", *out_symbols);
+  int read_size = fread(*out_symbols, 1, *size, fp);
 
-  char *symbols = malloc(size*sizeof(char));
-  int idx = 0;
-
-  for (int i=0; i<size; i++) {
-    int read_size = fscanf(fp, "%s", &symbols[idx]);
-    idx += read_size;
-  }
-
-  pack_sequence(symbols, size, packed_seq, len_packed);
+  //for (int i=0; i<40; i++) {
+  //  fprintf(stderr, "%c", (*out_symbols)[i]);
+  //}
+  //fprintf(stderr, "%s", "\n");
 
   fclose(fp);
+}
+
+void packed_from_file(const char *filename, unsigned char **out_packed,
+                      int *size) {
+  FILE *fp = fopen(filename, "r");
+  //fseek(fp, 0L, SEEK_END);
+  //*size = ftell(fp);
+  //fseek(fp, 0L, SEEK_SET);
+  // read len form first 4 bytes of file
+  fread(size, sizeof(int), 1, fp);
+  *out_packed = malloc(*size*sizeof(char));
+  int read_size = fread(*out_packed, 1, *size, fp);
+
+  //for (int i=0; i<40; i++) {
+  //  fprintf(stderr, "%X ", (*out_packed)[i]);
+  //}
+  //fprintf(stderr, "%s", "\n");
+
+  fclose(fp);
+}
+
+void packed_to_file(const char *filename, unsigned char *packed_seq,
+                    int size, int len) {
+  FILE *fp = fopen(filename, "w");
+  // write length to first 4 bytes
+  fwrite(&len, sizeof(int), 1, fp);
+  fwrite(packed_seq, 1, size, fp);
+  fclose(fp);
+}
+
+void symbols_to_file(const char *filename, char *symbols, int len_symbols) {
+  FILE *fp = fopen(filename, "w");
+  fwrite(symbols, 1, len_symbols, fp);
+  fclose(fp);
+}
+
+void file_symbols_to_packed(const char *in_file, const char *out_file) {
+  unsigned char *packed_seq;
+  char *symbols;
+  //char *in_sym = "ACAATGAG";
+  int len_symbols;
+  int len_seq;
+
+  FILE *fp = fopen(in_file, "r");
+  fseek(fp, 0L, SEEK_END);
+  len_symbols = ftell(fp);
+  fseek(fp, 0L, SEEK_SET);
+  symbols = malloc(len_symbols*sizeof(char));
+  //int read_size = fscanf(fp, "%s", *out_symbols);
+  int read_size = fread(symbols, 1, len_symbols, fp);
+
+  //symbols_from_file(in_file, &symbols, &len_symbols);
+  pack_sequence(symbols, len_symbols, &packed_seq, &len_seq);
+  //fprintf(stderr, "this test%s", "\n");
+  //print_vector(packed_seq, len_seq);
+  packed_to_file(out_file, packed_seq, len_seq, len_symbols);
+}
+
+void file_packed_to_symbols(const char *in_file, const char *out_file) {
+  unsigned char *packed_seq;
+  int len_packed;
+  char *symbols;
+  int len_symbols;
+  packed_from_file(in_file, &packed_seq, &len_packed);
+  unpack_sequence(packed_seq, len_packed, &symbols, &len_symbols);
+  fprintf(stderr, "lensym: %d\n", len_symbols);
+  symbols_to_file(out_file, symbols, len_symbols);
 }
 
 int symbol_to_number(char sym) {
