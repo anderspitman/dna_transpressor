@@ -173,7 +173,8 @@ void packed_to_file(const char *filename, unsigned char *packed_seq,
 
 void symbols_to_file(const char *filename, char *symbols, int len_symbols) {
   FILE *fp = fopen(filename, "w");
-  fwrite(symbols, 1, len_symbols, fp);
+  fwrite(symbols, 1, len_symbols-1, fp);
+  fwrite("\n", 1, 1, fp);
   fclose(fp);
 }
 
